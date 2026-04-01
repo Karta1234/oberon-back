@@ -1,0 +1,36 @@
+services:
+  bast-back:
+    image: ghcr.io/${GHCR_OWNER:-your-org}/bast-back:latest
+    container_name: bast-back
+    restart: unless-stopped
+    ports:
+      - '${PORT:-3000}:3000'
+    environment:
+      # App
+      NODE_ENV: production
+      PORT: 3000
+
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-oberon}:${POSTGRES_PASSWORD:-oberon}@postgres:5432/${POSTGRES_DB:-oberon}
+
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-change-me-jwt-secret}
+
+      # MinIO / S3
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_REGION: us-east-1
+      S3_BUCKET_PREFIX: oberon
+
+      # Polza AI
+      POLZA_API_BASE_URL: ${POLZA_API_BASE_URL:-https://polza.ai/api}
+      POLZA_API_KEY: ${POLZA_API_KEY:-change-me-polza-key}
+
+      # Pricing
+      GENERATION_MARKUP_PERCENT: ${GENERATION_MARKUP_PERCENT:-30}
+
+      # YooMoney
+      YOOMONEY_SHOP_ID: ${YOOMONEY_SHOP_ID:-stub}
+      YOOMONEY_SECRET_KEY: ${YOOMONEY_SECRET_KEY:-stub}
+      YOOMONEY_RETURN_URL: ${YOOMONEY_RETURN_URL:-http://localhost:5173/oberon/wallet}
