@@ -1,4 +1,4 @@
-name: Build and Deploy bast-back
+name: Build and Deploy roomup
 
 on:
   workflow_dispatch:
