@@ -1,0 +1,1357 @@
+> ## Documentation Index
+> Fetch the complete documentation index at: https://polza.ai/docs/llms.txt
+> Use this file to discover all available pages before exploring further.
+
+# POST Media
+
+> Универсальный API генерации медиа (изображения, видео, аудио)
+
+## О Media API
+
+Универсальный эндпоинт для генерации медиа контента. Поддерживает различные модели и провайдеров через единый интерфейс.
+
+### Общие параметры
+
+| Параметр   | Тип     | Обязательный | Описание                                |
+| ---------- | ------- | ------------ | --------------------------------------- |
+| `model`    | string  | Да           | ID модели для генерации                 |
+| `input`    | object  | Да           | Параметры генерации (зависят от модели) |
+| `async`    | boolean | Нет          | Принудительный асинхронный режим        |
+| `user`     | string  | Нет          | Идентификатор конечного пользователя    |
+| `provider` | object  | Нет          | Конфигурация роутинга по провайдерам    |
+
+### Передача файлов (URL и base64)
+
+Для моделей, поддерживающих image-to-image или video-to-video, медиа файлы передаются в массиве `images` или `videos`. Каждый элемент — объект с полями:
+
+| Поле   | Тип                   | Описание                                         |
+| ------ | --------------------- | ------------------------------------------------ |
+| `type` | `"url"` \| `"base64"` | Формат данных                                    |
+| `data` | string                | URL файла или base64-строка (с data URI или без) |
+
+#### Пример с base64
+
+```bash  theme={null}
+curl -X POST "https://polza.ai/api/v1/media" \
+  -H "Authorization: Bearer <POLZA_AI_API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "seedream-3",
+    "input": {
+      "prompt": "Сделай изображение ярче и добавь закат на фоне",
+      "images": [
+        {
+          "type": "base64",
+          "data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg..."
+        }
+      ]
+    }
+  }'
+```
+
+Можно комбинировать URL и base64 в одном запросе:
+
+```json  theme={null}
+{
+  "model": "gpt-image-1",
+  "input": {
+    "prompt": "Объедини эти изображения в коллаж",
+    "images": [
+      { "type": "url", "data": "https://example.com/photo1.png" },
+      { "type": "base64", "data": "data:image/jpeg;base64,/9j/4AAQSkZJRg..." }
+    ]
+  }
+}
+```
+
+<Note>
+  Base64 поддерживается как с data URI (`data:image/png;base64,...`), так и без — просто строка base64.
+  Если провайдер не поддерживает base64 напрямую, файл автоматически загружается в хранилище и передаётся как URL.
+</Note>
+
+### Типы контента
+
+* Изображения (Nano Banana, Seedream, GPT Image и др.)
+* Видео (Veo, Wan, Kling, Seedance, Sora и др.)
+* Аудио — синтез речи (TTS) и распознавание речи (STT)
+
+### Хранение результатов
+
+При генерации медиа контента Polza.ai автоматически:
+
+1. **Скачивает результат** у AI провайдера на собственное хранилище
+2. **Хранит файлы 7 дней** для повторного доступа
+3. **Раздаёт через CDN** для быстрого доступа внутри России
+
+<Note>
+  После истечения 7 дней файлы автоматически удаляются.
+  Для постоянного хранения используйте [Storage API](/api-reference/storage/upload) с политикой `PERMANENT`.
+</Note>
+
+***
+
+## Руководства по моделям
+
+Подробные примеры, параметры и особенности каждой модели — в руководствах:
+
+<CardGroup cols={3}>
+  <Card title="Видео" icon="video" href="/gaidy/veo-3-1">
+    Veo 3.1, Wan 2.5/2.6, Kling, Seedance, Sora и другие модели видеогенерации
+  </Card>
+
+  <Card title="Изображения" icon="image" href="/gaidy/seedream-4-5">
+    Seedream, Nano Banana, GPT Image, Flux, Grok Imagine и другие модели генерации изображений
+  </Card>
+
+  <Card title="Аудио" icon="volume-high" href="/gaidy/elevenlabs-tts-turbo">
+    ElevenLabs TTS и другие модели синтеза и распознавания речи
+  </Card>
+</CardGroup>
+
+***
+
+## Ответ
+
+Возвращает объект [Media Status](/api-reference/media/status) со статусом `pending`:
+
+```json  theme={null}
+{
+  "id": "aig_abc123",
+  "object": "media.generation",
+  "status": "pending",
+  "created": 1703001244,
+  "model": "google/veo3"
+}
+```
+
+Используйте [GET /v1/media/{id}](/api-reference/media/status) для проверки статуса и получения результата.
+
+
+## OpenAPI
+
+````yaml POST /v1/media
+openapi: 3.0.0
+info:
+  title: Polza.ai API
+  description: AI агрегатор — унифицированный доступ к сотням AI моделей
+  version: '1.0'
+  contact: {}
+servers:
+  - url: https://polza.ai/api
+    description: Production
+security: []
+tags: []
+paths:
+  /v1/media:
+    post:
+      tags:
+        - Медиа
+      summary: Создать генерацию медиа
+      operationId: MediaController_createGeneration[1]
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MediaRequestDto'
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaStatusPresenter'
+        '401':
+          description: Ошибка авторизации. Проверьте ключ доступа
+        '403':
+          description: Ошибка доступа. Проверьте права доступа ключа
+        '500':
+          description: Ошибка сервера. Обратитесь к поставщику услуг
+      security:
+        - bearer: []
+components:
+  schemas:
+    MediaRequestDto:
+      type: object
+      properties:
+        model:
+          type: string
+          description: ID модели для генерации
+          example: seedream-3
+        input:
+          description: Входные параметры генерации
+          oneOf:
+            - title: Изображение
+              allOf:
+                - $ref: '#/components/schemas/ImageInputDto'
+            - title: Видео
+              allOf:
+                - $ref: '#/components/schemas/VideoInputDto'
+            - title: Аудио (TTS)
+              allOf:
+                - $ref: '#/components/schemas/AudioInputDto'
+            - title: Музыка
+              allOf:
+                - $ref: '#/components/schemas/MusicInputDto'
+        provider:
+          description: Настройки роутинга провайдеров
+          allOf:
+            - $ref: '#/components/schemas/ProviderDto'
+        async:
+          type: boolean
+          description: >-
+            Асинхронный режим генерации. При true возвращается taskId для опроса
+            статуса
+          example: false
+          default: false
+        user:
+          type: string
+          description: >-
+            Уникальный идентификатор конечного пользователя для отслеживания и
+            предотвращения злоупотреблений
+          example: user-123
+      required:
+        - model
+        - input
+    MediaStatusPresenter:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Уникальный идентификатор генерации
+          example: gen_581761234567890123
+        object:
+          type: string
+          description: Тип объекта
+          example: media.generation
+        status:
+          type: string
+          description: Статус генерации
+          enum:
+            - pending
+            - processing
+            - completed
+            - failed
+            - cancelled
+          example: pending
+        created:
+          type: number
+          description: Временная метка создания (Unix timestamp)
+          example: 1703001234
+        model:
+          type: string
+          description: ID модели, которая генерирует контент
+          example: google/gemini-2.5-flash-image
+        completed_at:
+          type: number
+          description: Временная метка завершения (Unix timestamp)
+          example: 1703001244
+        data:
+          description: Данные сгенерированного контента
+          oneOf:
+            - f0b5f590-8eb4-48fc-8015-8135c9728cb9
+            - 0aa6ced1-d3d4-4d7c-93ed-d1a62b544056
+            - 9e81fd8b-ea9e-4b31-b2cb-d89cab11ea4d
+        usage:
+          description: Информация об использовании ресурсов
+          allOf:
+            - $ref: '#/components/schemas/MediaUsagePresenter'
+        error:
+          description: Информация об ошибке (если failed)
+          allOf:
+            - $ref: '#/components/schemas/MediaErrorPresenter'
+        content:
+          type: string
+          description: >-
+            Текстовый ответ модели (если вернула текст вместо/вместе с
+            изображением)
+          example: Банан и яблоко — это фрукты.
+        reasoning_summary:
+          type: string
+          description: Краткое резюме рассуждений модели
+          example: Preparing image generation prompt with camera settings...
+        warnings:
+          description: Предупреждения (неподдерживаемые параметры и т.д.)
+          example:
+            - >-
+              Параметр isEnhance не поддерживается OpenRouter и будет
+              проигнорирован
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - object
+        - status
+        - created
+        - model
+    ImageInputDto:
+      type: object
+      properties:
+        prompt:
+          type: string
+          description: Текстовое описание
+          example: Космический корабль в стиле киберпанк
+        aspect_ratio:
+          type: string
+          description: Соотношение сторон
+          example: '16:9'
+          enum:
+            - '1:1'
+            - '2:3'
+            - '3:2'
+            - '3:4'
+            - '4:3'
+            - '4:5'
+            - '5:4'
+            - '9:16'
+            - '16:9'
+            - '21:9'
+            - auto
+        images:
+          description: Медиа файлы для обработки
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaFileDto'
+        callBackUrl:
+          type: string
+          description: URL для callback уведомлений
+        seed:
+          type: number
+          description: Зерно генерации для воспроизводимости
+          example: 42
+        watermark:
+          type: string
+          description: Текст водяного знака
+          example: MyBrand
+        image_resolution:
+          type: string
+          description: Разрешение изображения
+          enum:
+            - 1K
+            - 2K
+            - 4K
+          example: 2K
+        quality:
+          type: string
+          description: Качество
+          enum:
+            - basic
+            - medium
+            - high
+          example: high
+        output_format:
+          type: string
+          description: >-
+            Формат выходного изображения (jpg автоматически преобразуется в
+            jpeg)
+          enum:
+            - png
+            - jpeg
+            - webp
+          example: png
+        max_images:
+          type: number
+          description: Количество изображений
+          example: 1
+          minimum: 1
+          maximum: 6
+        isEnhance:
+          type: boolean
+          description: Улучшить промпт для более качественного результата (GPT-Image-1)
+          example: false
+        guidance_scale:
+          type: number
+          description: Масштаб управления генерацией (CFG scale)
+          example: 2.5
+        strength:
+          type: number
+          description: Сила трансформации для image-to-image (0-1)
+          example: 0.8
+        enable_safety_checker:
+          type: boolean
+          description: Включить проверку безопасности
+          example: true
+        upscale_factor:
+          type: string
+          description: Коэффициент увеличения (для upscale моделей)
+          enum:
+            - '1'
+            - '2'
+            - '4'
+            - '8'
+          example: '2'
+        font_inputs:
+          description: >-
+            Входные шрифты для рендеринга текста (только Sourceful Riverflow V2
+            Fast/Pro, макс. 2)
+          type: array
+          items:
+            $ref: '#/components/schemas/FontInputDto'
+        super_resolution_references:
+          description: >-
+            URL высококачественных референсов для super resolution (только
+            Sourceful Riverflow, макс. 4)
+          example:
+            - https://example.com/reference1.jpg
+          type: array
+          items:
+            type: string
+      required:
+        - prompt
+    VideoInputDto:
+      type: object
+      properties:
+        prompt:
+          type: string
+          description: Текстовое описание
+          example: Космический корабль в стиле киберпанк
+        aspect_ratio:
+          type: string
+          description: Соотношение сторон
+          example: '16:9'
+          enum:
+            - '1:1'
+            - '2:3'
+            - '3:2'
+            - '3:4'
+            - '4:3'
+            - '4:5'
+            - '5:4'
+            - '9:16'
+            - '16:9'
+            - '21:9'
+            - auto
+        images:
+          description: Медиа файлы для обработки
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaFileDto'
+        callBackUrl:
+          type: string
+          description: URL для callback уведомлений
+        seed:
+          type: number
+          description: Зерно генерации для воспроизводимости
+          example: 42
+        watermark:
+          type: string
+          description: Текст водяного знака
+          example: MyBrand
+        duration:
+          type: string
+          description: Длительность видео
+          enum:
+            - 10s
+            - 15s
+          example: 10s
+        resolution:
+          type: string
+          description: Разрешение видео
+          enum:
+            - 480p
+            - 580p
+            - 720p
+            - 1080p
+          example: 720p
+        videos:
+          description: Видео файлы для обработки
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaFileDto'
+        multi_shots:
+          type: boolean
+          description: Режим мульти-шотов (Wan 2.6, Kling 3.0)
+        sound:
+          type: boolean
+          description: Генерация звука (Kling 2.6, Kling 3.0)
+        mode:
+          type: string
+          description: >-
+            Режим генерации (std/pro для Kling 3.0, 720p/1080p для Motion
+            Control)
+        character_orientation:
+          type: string
+          description: Ориентация персонажа (Kling 2.6 Motion Control)
+          enum:
+            - image
+            - video
+        upscale_factor:
+          type: string
+          description: Коэффициент увеличения (для video upscale моделей)
+          enum:
+            - '1'
+            - '2'
+            - '4'
+          example: '2'
+      required:
+        - prompt
+    AudioInputDto:
+      type: object
+      properties:
+        prompt:
+          type: string
+          description: Текст для синтеза речи
+          example: Привет, как дела?
+          maxLength: 5000
+        text:
+          type: string
+          description: Текст для синтеза (алиас для prompt, имеет приоритет)
+          example: Привет, как дела?
+          maxLength: 5000
+        voice:
+          type: string
+          description: Голос для синтеза
+          example: Rachel
+        stability:
+          type: number
+          description: Стабильность голоса (0-1)
+          example: 0.5
+        similarity_boost:
+          type: number
+          description: Усиление схожести (0-1)
+          example: 0.75
+        style:
+          type: number
+          description: Экспрессия стиля (0-1)
+          example: 0
+        speed:
+          type: number
+          description: Скорость речи (0.7-1.2)
+          example: 1
+        timestamps:
+          type: boolean
+          description: Включить временные метки слов
+          example: false
+        previous_text:
+          type: string
+          description: Предшествующий текст для контекста (до 5000 символов)
+          maxLength: 5000
+        next_text:
+          type: string
+          description: Последующий текст для контекста (до 5000 символов)
+          maxLength: 5000
+        language_code:
+          type: string
+          description: Код языка ISO 639-1 (только для Turbo 2.5)
+          example: ru
+        callBackUrl:
+          type: string
+          description: URL для callback уведомлений
+      required:
+        - prompt
+    MusicInputDto:
+      type: object
+      properties:
+        prompt:
+          type: string
+          description: >-
+            Описание трека или текст песни (lyrics в custom mode). В обычном
+            режиме — до 500 символов, в custom mode — до 5000
+          example: Спокойная инструментальная музыка для медитации
+          maxLength: 5000
+        customMode:
+          type: boolean
+          description: Режим расширенной настройки (требует style и title)
+          example: true
+        instrumental:
+          type: boolean
+          description: Инструментальная музыка без вокала
+          example: false
+        style:
+          type: string
+          description: Жанр/стиль музыки (обязателен в custom mode)
+          example: Pop, Electronic
+          maxLength: 1000
+        title:
+          type: string
+          description: Название трека (обязателен в custom mode)
+          example: Peaceful Meditation
+          maxLength: 80
+        negativeTags:
+          type: string
+          description: Стили для исключения из генерации
+          example: Heavy Metal, Screamo
+        vocalGender:
+          type: string
+          description: Пол вокалиста
+          enum:
+            - m
+            - f
+          example: f
+        styleWeight:
+          type: number
+          description: Сила следования стилю (0-1)
+          example: 0.65
+        weirdnessConstraint:
+          type: number
+          description: Уровень экспериментальности (0-1)
+          example: 0.3
+        audioWeight:
+          type: number
+          description: Баланс аудиофункций (0-1)
+          example: 0.5
+        personaId:
+          type: string
+          description: ID персоны для применения стиля
+        version:
+          type: string
+          description: Версия модели Suno
+          enum:
+            - V5
+            - V4_5ALL
+            - V4_5PLUS
+            - V4_5
+            - V4
+            - V3_5
+          example: V5
+        callBackUrl:
+          type: string
+          description: URL для callback уведомлений
+      required:
+        - prompt
+    ProviderDto:
+      type: object
+      properties:
+        allow_fallbacks:
+          type: boolean
+          description: Разрешить использование резервных провайдеров
+          example: true
+        order:
+          description: Упорядоченный список slug провайдеров для использования
+          example:
+            - OpenAI
+            - Anthropic
+          type: array
+          items:
+            type: string
+        only:
+          description: Список разрешенных slug провайдеров
+          example:
+            - OpenAI
+            - Google
+          type: array
+          items:
+            type: string
+        ignore:
+          description: Список игнорируемых slug провайдеров
+          example:
+            - DeepInfra
+          type: array
+          items:
+            type: string
+        sort:
+          type: string
+          description: Критерий сортировки провайдеров
+          enum:
+            - price
+            - throughput
+            - latency
+          example: price
+        max_price:
+          description: Максимальные цены для запроса
+          allOf:
+            - $ref: '#/components/schemas/ProviderMaxPriceDto'
+    MediaUsagePresenter:
+      type: object
+      properties:
+        input_units:
+          type: number
+          description: Входные единицы (для edit mode)
+          example: 1
+        output_units:
+          type: number
+          description: Выходные единицы (сгенерированные)
+          example: 1
+        duration_seconds:
+          type: number
+          description: Длительность для видео/аудио (секунды)
+          example: 5
+        input_tokens:
+          type: number
+          description: Количество входных токенов
+          example: 10
+        output_tokens:
+          type: number
+          description: Количество выходных токенов
+          example: 0
+        total_tokens:
+          type: number
+          description: Общее количество токенов
+          example: 10
+        cost_rub:
+          type: number
+          description: Стоимость в рублях
+          example: 1.5
+        cost:
+          type: number
+          description: Стоимость в рублях (alias для cost_rub)
+          example: 1.5
+    MediaErrorPresenter:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Код ошибки (FORBIDDEN, BAD_GATEWAY, REQUEST_TIMEOUT и т.д.)
+          example: BAD_GATEWAY
+        message:
+          type: string
+          description: Сообщение об ошибке на русском языке
+          example: Ошибка генерации медиа контента
+      required:
+        - code
+        - message
+    MediaFileDto:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - url
+            - base64
+          description: 'Тип данных: url или base64'
+          example: url
+        data:
+          type: string
+          description: URL или base64 данные изображения/видео
+          example: https://example.com/image.png
+      required:
+        - type
+        - data
+    FontInputDto:
+      type: object
+      properties:
+        font_url:
+          type: string
+          description: URL файла шрифта
+          example: https://example.com/fonts/custom-font.ttf
+        text:
+          type: string
+          description: Текст для рендеринга
+          example: Hello World
+      required:
+        - font_url
+        - text
+    ProviderMaxPriceDto:
+      type: object
+      properties:
+        prompt:
+          type: number
+          description: Максимальная цена за промпт токены (RUB за миллион токенов)
+          example: 10
+        completion:
+          type: number
+          description: Максимальная цена за completion токены (RUB за миллион токенов)
+          example: 20
+        image:
+          type: number
+          description: Максимальная цена за изображение (RUB за штуку)
+          example: 5
+        audio:
+          type: number
+          description: Максимальная цена за аудио (RUB за миллион токенов)
+          example: 15
+        request:
+          type: number
+          description: Максимальная цена за запрос (RUB за запрос)
+          example: 1
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: API Key
+      type: http
+      description: >-
+        API ключ передаётся в заголовке: Authorization: Bearer
+        <POLZA_AI_API_KEY>
+
+````
+
+Built with [Mintlify](https://mintlify.com).
+
+
+> ## Documentation Index
+> Fetch the complete documentation index at: https://polza.ai/docs/llms.txt
+> Use this file to discover all available pages before exploring further.
+
+# GET Media Status
+
+> Получение статуса генерации медиа
+
+## Polling
+
+Рекомендуется проверять статус с интервалом 3-5 секунд для изображений и 5-10 секунд для видео.
+
+## Статусы
+
+| Статус       | Описание                            |
+| ------------ | ----------------------------------- |
+| `pending`    | В очереди                           |
+| `processing` | Генерация выполняется               |
+| `completed`  | Готово — результат в поле `data`    |
+| `failed`     | Ошибка — подробности в поле `error` |
+
+## Ответ (completed)
+
+```json  theme={null}
+{
+  "id": "aig_abc123",
+  "object": "media.generation",
+  "status": "completed",
+  "created": 1703001244,
+  "model": "google/gemini-2.5-flash-image",
+  "data": {
+    "url": "https://s3.polza.ai/f/205141/2026/03/aig_abc123.jpg"
+  },
+  "usage": {
+    "output_units": 1,
+    "cost_rub": 5.00,
+    "cost": 5.00
+  }
+}
+```
+
+## Примеры polling
+
+<CodeGroup>
+  ```python Python theme={null}
+  import requests
+  import time
+
+  def wait_for_media(api_key, media_id, interval=5, max_wait=300):
+      url = f'https://polza.ai/api/v1/media/{media_id}'
+      headers = {'Authorization': f'Bearer {api_key}'}
+      elapsed = 0
+
+      while elapsed < max_wait:
+          response = requests.get(url, headers=headers)
+          data = response.json()
+
+          if data['status'] == 'completed':
+              return data
+          elif data['status'] == 'failed':
+              raise Exception(f"Генерация не удалась: {data.get('error')}")
+
+          time.sleep(interval)
+          elapsed += interval
+
+      raise TimeoutError("Превышено время ожидания")
+
+  result = wait_for_media('YOUR_API_KEY', 'aig_abc123')
+  print(f"Результат: {result['data']['url']}")
+  ```
+
+  ```javascript JavaScript theme={null}
+  async function waitForMedia(apiKey, mediaId, interval = 5000, maxWait = 300000) {
+    const url = `https://polza.ai/api/v1/media/${mediaId}`;
+    let elapsed = 0;
+
+    while (elapsed < maxWait) {
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${apiKey}` }
+      });
+      const data = await response.json();
+
+      if (data.status === 'completed') return data;
+      if (data.status === 'failed') throw new Error(`Ошибка: ${data.error}`);
+
+      await new Promise(resolve => setTimeout(resolve, interval));
+      elapsed += interval;
+    }
+
+    throw new Error('Превышено время ожидания');
+  }
+  ```
+</CodeGroup>
+
+<Note>
+  Результаты хранятся 7 дней на CDN. Для постоянного хранения используйте [Storage API](/api-reference/storage/upload).
+</Note>
+
+
+## OpenAPI
+
+````yaml GET /v1/media/{id}
+openapi: 3.0.0
+info:
+  title: Polza.ai API
+  description: AI агрегатор — унифицированный доступ к сотням AI моделей
+  version: '1.0'
+  contact: {}
+servers:
+  - url: https://polza.ai/api
+    description: Production
+security: []
+tags: []
+paths:
+  /v1/media/{id}:
+    get:
+      tags:
+        - Медиа
+      summary: Получить статус генерации
+      operationId: MediaController_getGenerationStatus[1]
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaStatusPresenter'
+        '401':
+          description: Ошибка авторизации. Проверьте ключ доступа
+        '403':
+          description: Ошибка доступа. Проверьте права доступа ключа
+        '500':
+          description: Ошибка сервера. Обратитесь к поставщику услуг
+      security:
+        - bearer: []
+components:
+  schemas:
+    MediaStatusPresenter:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Уникальный идентификатор генерации
+          example: gen_581761234567890123
+        object:
+          type: string
+          description: Тип объекта
+          example: media.generation
+        status:
+          type: string
+          description: Статус генерации
+          enum:
+            - pending
+            - processing
+            - completed
+            - failed
+            - cancelled
+          example: pending
+        created:
+          type: number
+          description: Временная метка создания (Unix timestamp)
+          example: 1703001234
+        model:
+          type: string
+          description: ID модели, которая генерирует контент
+          example: google/gemini-2.5-flash-image
+        completed_at:
+          type: number
+          description: Временная метка завершения (Unix timestamp)
+          example: 1703001244
+        data:
+          description: Данные сгенерированного контента
+          oneOf:
+            - f0b5f590-8eb4-48fc-8015-8135c9728cb9
+            - 0aa6ced1-d3d4-4d7c-93ed-d1a62b544056
+            - 9e81fd8b-ea9e-4b31-b2cb-d89cab11ea4d
+        usage:
+          description: Информация об использовании ресурсов
+          allOf:
+            - $ref: '#/components/schemas/MediaUsagePresenter'
+        error:
+          description: Информация об ошибке (если failed)
+          allOf:
+            - $ref: '#/components/schemas/MediaErrorPresenter'
+        content:
+          type: string
+          description: >-
+            Текстовый ответ модели (если вернула текст вместо/вместе с
+            изображением)
+          example: Банан и яблоко — это фрукты.
+        reasoning_summary:
+          type: string
+          description: Краткое резюме рассуждений модели
+          example: Preparing image generation prompt with camera settings...
+        warnings:
+          description: Предупреждения (неподдерживаемые параметры и т.д.)
+          example:
+            - >-
+              Параметр isEnhance не поддерживается OpenRouter и будет
+              проигнорирован
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - object
+        - status
+        - created
+        - model
+    MediaUsagePresenter:
+      type: object
+      properties:
+        input_units:
+          type: number
+          description: Входные единицы (для edit mode)
+          example: 1
+        output_units:
+          type: number
+          description: Выходные единицы (сгенерированные)
+          example: 1
+        duration_seconds:
+          type: number
+          description: Длительность для видео/аудио (секунды)
+          example: 5
+        input_tokens:
+          type: number
+          description: Количество входных токенов
+          example: 10
+        output_tokens:
+          type: number
+          description: Количество выходных токенов
+          example: 0
+        total_tokens:
+          type: number
+          description: Общее количество токенов
+          example: 10
+        cost_rub:
+          type: number
+          description: Стоимость в рублях
+          example: 1.5
+        cost:
+          type: number
+          description: Стоимость в рублях (alias для cost_rub)
+          example: 1.5
+    MediaErrorPresenter:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Код ошибки (FORBIDDEN, BAD_GATEWAY, REQUEST_TIMEOUT и т.д.)
+          example: BAD_GATEWAY
+        message:
+          type: string
+          description: Сообщение об ошибке на русском языке
+          example: Ошибка генерации медиа контента
+      required:
+        - code
+        - message
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: API Key
+      type: http
+      description: >-
+        API ключ передаётся в заголовке: Authorization: Bearer
+        <POLZA_AI_API_KEY>
+
+````
+
+Built with [Mintlify](https://mintlify.com).
+
+> ## Documentation Index
+> Fetch the complete documentation index at: https://polza.ai/docs/llms.txt
+> Use this file to discover all available pages before exploring further.
+
+# POST Media Operations
+
+> Выполнение операций над существующими медиа (extend, upscale)
+
+## Операции над медиа
+
+После генерации медиа контента можно выполнять дополнительные операции:
+
+| Операция        | Описание                       | Тип         |
+| --------------- | ------------------------------ | ----------- |
+| `extend`        | Продление видео                | Асинхронная |
+| `upscale_1080p` | Увеличение разрешения до 1080p | Синхронная  |
+| `upscale_4k`    | Увеличение разрешения до 4K    | Синхронная  |
+
+## Синхронные vs Асинхронные операции
+
+### Синхронные операции (upscale)
+
+Результат возвращается сразу в поле `data`:
+
+```json  theme={null}
+{
+  "id": "aig_abc123",
+  "object": "media.generation",
+  "status": "completed",
+  "created": 1703001244,
+  "model": "google/gemini-2.5-flash-image",
+  "data": {
+    "url": "https://storage.polza.ai/video_1080p.mp4"
+  }
+}
+```
+
+### Асинхронные операции (extend)
+
+Создаётся новая генерация со статусом `pending`:
+
+```json  theme={null}
+{
+  "id": "aig_xyz789",
+  "object": "media.generation",
+  "status": "pending",
+  "created": 1703001244,
+  "model": "pending"
+}
+```
+
+Для получения результата используйте [GET /v1/media/{id}](/api-reference/media/status) с новым ID.
+
+### Параметр async
+
+* `async: false` (по умолчанию) — ждёт результат до 120 секунд
+* `async: true` — сразу возвращает ID новой генерации
+
+## Примеры
+
+### Продление видео (extend)
+
+```bash  theme={null}
+curl -X POST "https://polza.ai/api/v1/media/aig_abc123/operations" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "extend",
+    "params": {
+      "prompt": "Камера отдаляется, показывая панораму города"
+    }
+  }'
+```
+
+### Увеличение разрешения (upscale)
+
+```bash  theme={null}
+curl -X POST "https://polza.ai/api/v1/media/aig_abc123/operations" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "upscale_1080p"
+  }'
+```
+
+## Параметры операции extend
+
+| Параметр   | Тип    | Обязательный | Описание                          |
+| ---------- | ------ | ------------ | --------------------------------- |
+| `prompt`   | string | Да           | Промпт для продолжения видео      |
+| `seeds`    | number | Нет          | Seed для воспроизводимости        |
+| `duration` | number | Нет          | Длительность продления (3-10 сек) |
+
+<Note>
+  Операция extend создаёт новую генерацию с новым ID.
+  Оригинальное видео не изменяется.
+</Note>
+
+
+## OpenAPI
+
+````yaml POST /v1/media/{id}/operations
+openapi: 3.0.0
+info:
+  title: Polza.ai API
+  description: AI агрегатор — унифицированный доступ к сотням AI моделей
+  version: '1.0'
+  contact: {}
+servers:
+  - url: https://polza.ai/api
+    description: Production
+security: []
+tags: []
+paths:
+  /v1/media/{id}/operations:
+    post:
+      tags:
+        - Медиа
+      summary: Выполнить операцию над медиа
+      operationId: MediaController_executeOperation[1]
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MediaOperationRequestDto'
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaStatusPresenter'
+        '401':
+          description: Ошибка авторизации. Проверьте ключ доступа
+        '403':
+          description: Ошибка доступа. Проверьте права доступа ключа
+        '500':
+          description: Ошибка сервера. Обратитесь к поставщику услуг
+      security:
+        - bearer: []
+components:
+  schemas:
+    MediaOperationRequestDto:
+      type: object
+      properties:
+        operation:
+          type: string
+          description: ID операции
+          example: extend
+          enum:
+            - extend
+            - upscale_1080p
+            - upscale_4k
+        params:
+          type: object
+          description: Параметры операции. Зависят от типа операции.
+          example:
+            prompt: Продолжение сцены
+            seeds: 12345
+        async:
+          type: boolean
+          description: >-
+            Асинхронный режим. При true сразу возвращает ID операции, результат
+            получить через GET /v2/media/:id
+          example: false
+          default: false
+      required:
+        - operation
+    MediaStatusPresenter:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Уникальный идентификатор генерации
+          example: gen_581761234567890123
+        object:
+          type: string
+          description: Тип объекта
+          example: media.generation
+        status:
+          type: string
+          description: Статус генерации
+          enum:
+            - pending
+            - processing
+            - completed
+            - failed
+            - cancelled
+          example: pending
+        created:
+          type: number
+          description: Временная метка создания (Unix timestamp)
+          example: 1703001234
+        model:
+          type: string
+          description: ID модели, которая генерирует контент
+          example: google/gemini-2.5-flash-image
+        completed_at:
+          type: number
+          description: Временная метка завершения (Unix timestamp)
+          example: 1703001244
+        data:
+          description: Данные сгенерированного контента
+          oneOf:
+            - f0b5f590-8eb4-48fc-8015-8135c9728cb9
+            - 0aa6ced1-d3d4-4d7c-93ed-d1a62b544056
+            - 9e81fd8b-ea9e-4b31-b2cb-d89cab11ea4d
+        usage:
+          description: Информация об использовании ресурсов
+          allOf:
+            - $ref: '#/components/schemas/MediaUsagePresenter'
+        error:
+          description: Информация об ошибке (если failed)
+          allOf:
+            - $ref: '#/components/schemas/MediaErrorPresenter'
+        content:
+          type: string
+          description: >-
+            Текстовый ответ модели (если вернула текст вместо/вместе с
+            изображением)
+          example: Банан и яблоко — это фрукты.
+        reasoning_summary:
+          type: string
+          description: Краткое резюме рассуждений модели
+          example: Preparing image generation prompt with camera settings...
+        warnings:
+          description: Предупреждения (неподдерживаемые параметры и т.д.)
+          example:
+            - >-
+              Параметр isEnhance не поддерживается OpenRouter и будет
+              проигнорирован
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - object
+        - status
+        - created
+        - model
+    MediaUsagePresenter:
+      type: object
+      properties:
+        input_units:
+          type: number
+          description: Входные единицы (для edit mode)
+          example: 1
+        output_units:
+          type: number
+          description: Выходные единицы (сгенерированные)
+          example: 1
+        duration_seconds:
+          type: number
+          description: Длительность для видео/аудио (секунды)
+          example: 5
+        input_tokens:
+          type: number
+          description: Количество входных токенов
+          example: 10
+        output_tokens:
+          type: number
+          description: Количество выходных токенов
+          example: 0
+        total_tokens:
+          type: number
+          description: Общее количество токенов
+          example: 10
+        cost_rub:
+          type: number
+          description: Стоимость в рублях
+          example: 1.5
+        cost:
+          type: number
+          description: Стоимость в рублях (alias для cost_rub)
+          example: 1.5
+    MediaErrorPresenter:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Код ошибки (FORBIDDEN, BAD_GATEWAY, REQUEST_TIMEOUT и т.д.)
+          example: BAD_GATEWAY
+        message:
+          type: string
+          description: Сообщение об ошибке на русском языке
+          example: Ошибка генерации медиа контента
+      required:
+        - code
+        - message
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: API Key
+      type: http
+      description: >-
+        API ключ передаётся в заголовке: Authorization: Bearer
+        <POLZA_AI_API_KEY>
+
+````
+
+Built with [Mintlify](https://mintlify.com).

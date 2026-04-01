@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__context7__query-docs",
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(cmd /c \"dir /b D:\\\\Project\\\\Bast\\\\Антон\"\")",
+      "Bash(node -e:*)"
+    ]
+  }
+}

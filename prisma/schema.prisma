@@ -1,0 +1,127 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Account {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String?
+  name      String?
+  role      Role     @default(USER)
+  balance   Decimal  @default(0) @db.Decimal(12, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  generations    Generation[]
+  transactions   Transaction[]
+  payments       Payment[]
+  oauthProviders OAuthProvider[]
+}
+
+model OAuthProvider {
+  id             String   @id @default(uuid())
+  accountId      String
+  account        Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  provider       String   // "google" | "yandex"
+  providerUserId String
+  createdAt      DateTime @default(now())
+
+  @@unique([provider, providerUserId])
+  @@index([accountId])
+}
+
+enum GenerationStatus {
+  uploading
+  pending
+  processing
+  completed
+  failed
+}
+
+model Generation {
+  id                 String           @id @default(uuid())
+  accountId          String
+  account            Account          @relation(fields: [accountId], references: [id])
+  prompt             String
+  style              String?
+  status             GenerationStatus @default(uploading)
+  roomImageKey       String?
+  furnitureImageKeys String[]
+  resultImageKey     String?
+  polzaGenerationId  String?
+  polzaModel         String?
+  costRub            Decimal?         @db.Decimal(10, 2)
+  totalCostRub       Decimal?         @db.Decimal(10, 2)
+  errorMessage       String?
+  createdAt          DateTime         @default(now())
+  completedAt        DateTime?
+  transaction        Transaction?
+
+  @@index([accountId, createdAt(sort: Desc)])
+}
+
+enum TransactionType {
+  top_up
+  charge
+  refund
+}
+
+model Transaction {
+  id           String          @id @default(uuid())
+  accountId    String
+  account      Account         @relation(fields: [accountId], references: [id])
+  type         TransactionType
+  amount       Decimal         @db.Decimal(12, 2)
+  description  String
+  generationId String?         @unique
+  generation   Generation?     @relation(fields: [generationId], references: [id])
+  paymentId    String?
+  payment      Payment?        @relation(fields: [paymentId], references: [id])
+  createdAt    DateTime        @default(now())
+
+  @@index([accountId, createdAt(sort: Desc)])
+}
+
+enum PaymentStatus {
+  pending
+  succeeded
+  failed
+  cancelled
+}
+
+model Payment {
+  id           String        @id @default(uuid())
+  accountId    String
+  account      Account       @relation(fields: [accountId], references: [id])
+  amount       Decimal       @db.Decimal(12, 2)
+  status       PaymentStatus @default(pending)
+  provider     String        @default("yoomoney_stub")
+  externalId   String?
+  redirectUrl  String?
+  metadata     Json?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+
+  @@index([accountId, createdAt(sort: Desc)])
+  @@index([externalId])
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
