@@ -1,4 +1,4 @@
-name: Build and Deploy bast-back
+name: Build and Deploy roomup-back
 
 on:
   workflow_dispatch:
@@ -30,7 +30,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ env.OWNER_LC }}/bast-back:latest
+          tags: ghcr.io/${{ env.OWNER_LC }}/roomup-back:latest
 
   deploy:
     name: Deploy to Production
@@ -46,6 +46,6 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd /opt/roomup
-            docker compose pull bast-back
-            docker compose up -d bast-back
+            docker compose pull roomup-back
+            docker compose up -d roomup-back
             docker image prune -f
