@@ -6,7 +6,8 @@
       "Bash(npm install:*)",
       "Bash(npm run build:*)",
       "Bash(cmd /c \"dir /b D:\\\\Project\\\\Bast\\\\Антон\"\")",
-      "Bash(node -e:*)"
+      "Bash(node -e:*)",
+      "Bash(docker run:*)"
     ]
   }
 }

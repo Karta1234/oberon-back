@@ -2,7 +2,7 @@ import {
   Controller,
   Get,
   Post,
-  Body,
+  // Body,
   Res,
   UseGuards,
   Req,
@@ -10,8 +10,8 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Response, Request, CookieOptions } from 'express';
 import { AuthService, OAuthProfile } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
+// import { RegisterDto } from './dto/register.dto';
+// import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { YandexAuthGuard } from './guards/yandex-auth.guard';
@@ -32,20 +32,21 @@ export class AuthController {
     };
   }
 
-  @Post('login')
-  async login(
-    @Body() dto: LoginDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const { token, user } = await this.authService.login(dto);
-    res.cookie('access_token', token, this.getCookieOptions());
-    return user;
-  }
+  // --- Email/password login & register temporarily disabled ---
+  // @Post('login')
+  // async login(
+  //   @Body() dto: LoginDto,
+  //   @Res({ passthrough: true }) res: Response,
+  // ) {
+  //   const { token, user } = await this.authService.login(dto);
+  //   res.cookie('access_token', token, this.getCookieOptions());
+  //   return user;
+  // }
 
-  @Post('register')
-  register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
-  }
+  // @Post('register')
+  // register(@Body() dto: RegisterDto) {
+  //   return this.authService.register(dto);
+  // }
 
   @Post('logout')
   @UseGuards(JwtAuthGuard)

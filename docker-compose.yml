@@ -1,10 +1,52 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: oberon-postgres
+    restart: unless-stopped
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-oberon}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oberon}
+      POSTGRES_DB: ${POSTGRES_DB:-oberon}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-oberon}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: oberon-minio
+    restart: unless-stopped
+    ports:
+      - '${MINIO_API_PORT:-9000}:9000'
+      - '${MINIO_CONSOLE_PORT:-9001}:9001'
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   bast-back:
     image: ghcr.io/${GHCR_OWNER:-your-org}/bast-back:latest
     container_name: bast-back
     restart: unless-stopped
     ports:
       - '${PORT:-3000}:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     environment:
       # App
       NODE_ENV: production
@@ -34,3 +76,7 @@ services:
       YOOMONEY_SHOP_ID: ${YOOMONEY_SHOP_ID:-stub}
       YOOMONEY_SECRET_KEY: ${YOOMONEY_SECRET_KEY:-stub}
       YOOMONEY_RETURN_URL: ${YOOMONEY_RETURN_URL:-http://localhost:5173/oberon/wallet}
+
+volumes:
+  postgres_data:
+  minio_data:
