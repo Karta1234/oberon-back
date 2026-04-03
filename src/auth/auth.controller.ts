@@ -89,7 +89,9 @@ export class AuthController {
       res.redirect(frontendUrl);
     } catch (err) {
       this.logger.error(`Google OAuth failed: ${err.message}`, err.stack);
-      res.redirect(`${frontendUrl}?auth_error=1`);
+      if (!res.headersSent) {
+        res.redirect(`${frontendUrl}?auth_error=1`);
+      }
     }
   }
 
@@ -118,7 +120,9 @@ export class AuthController {
       res.redirect(frontendUrl);
     } catch (err) {
       this.logger.error(`Yandex OAuth failed: ${err.message}`, err.stack);
-      res.redirect(`${frontendUrl}?auth_error=1`);
+      if (!res.headersSent) {
+        res.redirect(`${frontendUrl}?auth_error=1`);
+      }
     }
   }
 }
