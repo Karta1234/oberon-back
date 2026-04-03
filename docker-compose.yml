@@ -36,9 +36,9 @@ services:
       timeout: 5s
       retries: 5
 
-  bast-back:
-    image: ghcr.io/${GHCR_OWNER:-your-org}/bast-back:latest
-    container_name: bast-back
+  oberon-back:
+    image: ghcr.io/${GHCR_OWNER:-your-org}/oberon-back:latest
+    container_name: oberon-back
     restart: unless-stopped
     ports:
       - '${PORT:-3000}:3000'
@@ -75,7 +75,7 @@ services:
       # YooMoney
       YOOMONEY_SHOP_ID: ${YOOMONEY_SHOP_ID:-stub}
       YOOMONEY_SECRET_KEY: ${YOOMONEY_SECRET_KEY:-stub}
-      YOOMONEY_RETURN_URL: ${YOOMONEY_RETURN_URL:-http://localhost:5173/oberon/wallet}
+      YOOMONEY_RETURN_URL: ${YOOMONEY_RETURN_URL:-https://diz-diz.ru/wallet}
 
 volumes:
   postgres_data:

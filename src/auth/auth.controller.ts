@@ -75,13 +75,17 @@ export class AuthController {
     @Req() req: Request & { user: OAuthProfile },
     @Res() res: Response,
   ) {
-    const { token } = await this.authService.oauthLogin(req.user);
     const frontendUrl = this.config.get<string>(
       'FRONTEND_URL',
       'http://localhost:5173/oberon/',
     );
-    res.cookie('access_token', token, this.getCookieOptions());
-    res.redirect(frontendUrl);
+    try {
+      const { token } = await this.authService.oauthLogin(req.user);
+      res.cookie('access_token', token, this.getCookieOptions());
+      res.redirect(frontendUrl);
+    } catch {
+      res.redirect(`${frontendUrl}?auth_error=1`);
+    }
   }
 
   // --- Yandex OAuth ---
@@ -98,12 +102,16 @@ export class AuthController {
     @Req() req: Request & { user: OAuthProfile },
     @Res() res: Response,
   ) {
-    const { token } = await this.authService.oauthLogin(req.user);
     const frontendUrl = this.config.get<string>(
       'FRONTEND_URL',
       'http://localhost:5173/oberon/',
     );
-    res.cookie('access_token', token, this.getCookieOptions());
-    res.redirect(frontendUrl);
+    try {
+      const { token } = await this.authService.oauthLogin(req.user);
+      res.cookie('access_token', token, this.getCookieOptions());
+      res.redirect(frontendUrl);
+    } catch {
+      res.redirect(`${frontendUrl}?auth_error=1`);
+    }
   }
 }

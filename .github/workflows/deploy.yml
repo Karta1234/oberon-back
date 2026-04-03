@@ -1,4 +1,4 @@
-name: Build and Deploy roomup-back
+name: Build and Deploy oberon-back
 
 on:
   workflow_dispatch:
@@ -30,7 +30,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ env.OWNER_LC }}/roomup-back:latest
+          tags: ghcr.io/${{ env.OWNER_LC }}/oberon-back:latest
 
   deploy:
     name: Deploy to Production
@@ -46,7 +46,8 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            cd /opt/roomup
-            docker compose pull roomup-back
-            docker compose up -d roomup-back
+            cd /opt/oberon
+            docker compose pull oberon-back
+            docker compose up -d oberon-back
+            docker compose exec -T oberon-back npx prisma migrate deploy
             docker image prune -f
