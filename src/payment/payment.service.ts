@@ -25,10 +25,17 @@ export class PaymentService {
     private readonly configService: ConfigService,
   ) {}
 
+  private get providerName(): string {
+    return this.configService.get<string>('PAYMENT_PROVIDER', 'stub');
+  }
+
   async createPayment(accountId: string, dto: CreatePaymentDto) {
     const returnUrl = this.configService.get<string>(
-      'YOOMONEY_RETURN_URL',
-      'http://localhost:5173/wallet',
+      'PAYMENT_RETURN_URL',
+      this.configService.get<string>(
+        'YOOMONEY_RETURN_URL',
+        'http://localhost:5173/wallet',
+      ),
     );
 
     const { externalId, redirectUrl } = await this.provider.createPayment({
@@ -45,7 +52,7 @@ export class PaymentService {
         status: 'pending',
         externalId,
         redirectUrl,
-        provider: 'yoomoney_stub',
+        provider: this.providerName,
       },
     });
 
@@ -56,6 +63,13 @@ export class PaymentService {
     const isValid = this.provider.verifyWebhook(body, headers);
     if (!isValid) {
       throw new UnauthorizedException('Невалидная подпись вебхука');
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment
+    const event: string | undefined = body.event;
+    if (event && event !== 'payment.succeeded') {
+      this.logger.log(`Webhook event "${event}" проигнорирован`);
+      return;
     }
 
     const externalId: string | undefined =
@@ -78,10 +92,15 @@ export class PaymentService {
       data: { status: 'succeeded' },
     });
 
+    const topUpDescription =
+      this.providerName === 'yookassa'
+        ? 'Пополнение через ЮKassa'
+        : 'Пополнение через ЮMoney';
+
     await this.walletService.topUp(
       payment.accountId,
       payment.amount,
-      'Пополнение через ЮMoney',
+      topUpDescription,
       payment.id,
     );
 
