@@ -6,6 +6,7 @@ import {
   Res,
   UseGuards,
   Req,
+  Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Response, Request, CookieOptions } from 'express';
@@ -18,6 +19,8 @@ import { YandexAuthGuard } from './guards/yandex-auth.guard';
 
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(
     private readonly authService: AuthService,
     private readonly config: ConfigService,
@@ -80,10 +83,12 @@ export class AuthController {
       'http://localhost:5173/oberon/',
     );
     try {
+      this.logger.log(`Google OAuth profile: ${JSON.stringify(req.user)}`);
       const { token } = await this.authService.oauthLogin(req.user);
       res.cookie('access_token', token, this.getCookieOptions());
       res.redirect(frontendUrl);
-    } catch {
+    } catch (err) {
+      this.logger.error(`Google OAuth failed: ${err.message}`, err.stack);
       res.redirect(`${frontendUrl}?auth_error=1`);
     }
   }
@@ -107,10 +112,12 @@ export class AuthController {
       'http://localhost:5173/oberon/',
     );
     try {
+      this.logger.log(`Yandex OAuth profile: ${JSON.stringify(req.user)}`);
       const { token } = await this.authService.oauthLogin(req.user);
       res.cookie('access_token', token, this.getCookieOptions());
       res.redirect(frontendUrl);
-    } catch {
+    } catch (err) {
+      this.logger.error(`Yandex OAuth failed: ${err.message}`, err.stack);
       res.redirect(`${frontendUrl}?auth_error=1`);
     }
   }
