@@ -14,27 +14,37 @@ import { Readable } from 'stream';
 export class StorageService implements OnModuleInit {
   private readonly logger = new Logger(StorageService.name);
   private readonly client: S3Client;
+  private readonly publicClient: S3Client | null;
   private readonly bucketPrefix: string;
 
   private readonly buckets = ['room-images', 'furniture-images', 'generated-results'];
 
   constructor(private readonly config: ConfigService) {
     const endpoint = config.getOrThrow<string>('S3_ENDPOINT');
+    const publicEndpoint = config.get<string>('S3_PUBLIC_ENDPOINT');
     const accessKeyId = config.getOrThrow<string>('S3_ACCESS_KEY');
     const secretAccessKey = config.getOrThrow<string>('S3_SECRET_KEY');
     const region = config.get<string>('S3_REGION', 'us-east-1');
 
     this.bucketPrefix = config.get<string>('S3_BUCKET_PREFIX', 'oberon');
 
+    const credentials = { accessKeyId, secretAccessKey };
+
     this.client = new S3Client({
       endpoint,
       region,
-      credentials: {
-        accessKeyId,
-        secretAccessKey,
-      },
+      credentials,
       forcePathStyle: true,
     });
+
+    this.publicClient = publicEndpoint
+      ? new S3Client({
+          endpoint: publicEndpoint,
+          region,
+          credentials,
+          forcePathStyle: true,
+        })
+      : null;
   }
 
   private getBucketName(bucket: string): string {
@@ -113,6 +123,6 @@ export class StorageService implements OnModuleInit {
       Bucket: this.getBucketName(bucket),
       Key: key,
     });
-    return getSignedUrl(this.client, command, { expiresIn });
+    return getSignedUrl(this.publicClient ?? this.client, command, { expiresIn });
   }
 }
